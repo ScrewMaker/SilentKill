@@ -1,0 +1,125 @@
+local modules = {
+    ["PlayerClient"] = {},
+    ["Character"] = {},
+    ["Camera"] = {},
+    ["RangedWeaponClient"] = {},
+    ["GetEquippedItem"] = {},
+    ["FPS"] = {},
+}
+
+for _, v in pairs(getgc(true)) do
+    if typeof(v) == "function" and islclosure(v) then
+        local info = debug.getinfo(v)
+        local name = string.match(info.short_src, "%.([%w_]+)$")
+        if name and modules[name] and info.name then
+            modules[name][info.name] = info.func
+        end
+    end
+end
+
+local lamae = debug.getupvalues(modules.Character.updateCharacter)
+local RunService, Camera = game:GetService("RunService"), workspace.CurrentCamera
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+local Color3_fromRGB = Color3.fromRGB
+
+local settings = {
+    killAura = {
+        enabled = true,
+        distance = 10,
+        validWeapons = {
+            ["Hammer"] = true,
+            ["Crowbar"] = true,
+            ["StoneHammer"] = true,
+            ["SteelHammer"] = true,
+            ["MiningDrill"] = true,
+            ["IronHammer"] = true
+        },
+        hitPart = "Head"
+    },
+    silentFarm = {
+        enabled = true,
+        speed = 0.05,
+        distance = 10,
+        entities = {"Cactus", "Tree", "Nitrate", "Stone", "Iron", " Safe"}
+    }
+}
+
+local function GetLocalToolName()
+    if not CharacterList or not CharacterList[2] or not CharacterList[2].GetEquippedItem then
+        return "nothing you pooron"
+    end
+    local equippedItem = CharacterList[2].GetEquippedItem()
+    return equippedItem and equippedItem.type or "nothing you pooron"
+end
+
+local function GetClosestPlayer()
+    local closest, playerTable, closestMagnitude = nil, nil, math.huge
+    local localCharPos = workspace.Ignore.LocalCharacter.Middle.Position
+
+    for _, v in pairs(PlayerList or {}) do
+        if v.type == "Player" and v.model then
+            local humanoidRootPart = v.model:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart and not v.sleeping then
+                local playerDistance = (localCharPos - humanoidRootPart.Position).Magnitude
+                if playerDistance <= settings.killAura.distance then
+                    local magnitude = (Camera:WorldToViewportPoint(humanoidRootPart.Position) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                    if magnitude < closestMagnitude then
+                        closestMagnitude = magnitude
+                        closest = v.model
+                        playerTable = v
+                    end
+                end
+            end
+        end
+    end
+    return closest, playerTable
+end
+
+task.spawn(function()
+    while task.wait(0.01) do
+        if settings.killAura.enabled then
+            local player, fr = GetClosestPlayer()
+            local Weapon = GetLocalToolName()
+            if player and fr and settings.killAura.validWeapons[Weapon] then
+                localPlayer.TCP:FireServer(10, "Swing")
+                localPlayer.TCP:FireServer(10, "Hit", fr.id, player.HumanoidRootPart.Position, settings.killAura.hitPart, Vector3.new(0, 0, 0))
+                task.wait(Weapon == "MiningDrill" and 0.01 or 0.95)
+            else
+                task.wait(0.1)
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.01) do
+        if settings.silentFarm.enabled then
+            local playerPosition = workspace.Ignore.LocalCharacter.Middle and workspace.Ignore.LocalCharacter.Middle.Position
+            if not playerPosition then continue end
+
+            for id, entity in pairs(lamae[14].EntityMap or {}) do
+                if type(entity) == "table" and type(entity.type) == "string" then
+                    for _, entityType in ipairs(settings.silentFarm.entities) do
+                        if string.match(entity.type, entityType) then
+                            local entityPosition = entity.pos
+                            if not entityPosition then continue end
+
+                            local distanceToEntity = (playerPosition - entityPosition).Magnitude
+                            if distanceToEntity <= settings.silentFarm.distance then
+                                local Weapon = GetLocalToolName()
+                                local waitTime = Weapon == "MiningDrill" and 0.01 or settings.silentFarm.speed
+
+                                localPlayer.TCP:FireServer(10, "Swing")
+                                local hitType = (entity.type == "Tree") and "default" or "Part"
+                                local hitPosition = Vector3.new(0, 0, 0)
+                                localPlayer.TCP:FireServer(10, "Hit", id, entityPosition, hitType, hitPosition)
+
+                                task.wait(waitTime)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        else
