@@ -1,3 +1,644 @@
+getgenv().whitelisted = true
+--[[                        warn("Wait 7 Seconds Script Is Loading!")
+                            wait(0.1)
+                            repeat
+                                wait(0.1)
+                            until game:IsLoaded()
+
+                            wait(7)
+                            
+                            local Crash = function()
+                                while true do end
+                            end
+                            local Kick = clonefunction(game.Players.LocalPlayer.Kick);
+                            --
+                            local HookedCheck = function(func)
+                                if islclosure(func) then
+                                    return true;
+                                end
+                                local info = debug.getinfo(func)
+                                if info.source ~= "=[C]" or info.short_src ~= "[C]" or info.what ~= "C" then
+                                    return true;
+                                end
+                                return false;
+                            end
+                            --
+                            local success, error = pcall(function()
+                                loadstring("\t\t")()
+                                loadstring("getgenv().whitelisted = true")();
+                            end)
+                            if not success then
+                                Kick(Codes["Check"]["TamperingDetected"]); Crash();
+                            end
+                            if not getgenv().whitelisted then Kick(Codes["Check"]["TamperingDetected"]) end
+                            if game:GetService("RunService"):IsStudio() then Kick(Codes["Check"]["TamperingDetected"]); Crash(); end
+                            --
+                            if pcall(islclosure) then
+                                if debugeverything then
+                                    print("islclosure"); return;
+                                end
+                                Crash();
+                            end;
+                            if not request or HookedCheck(islclosure) or HookedCheck(debug.getinfo) or HookedCheck(request) then
+                                if debugeverything then
+                                    print("http spy"); return;
+                                end
+                                    Crash();
+                                end
+                            --
+                            local CheckAllThese = {math.random, os.clock, string.char, string.byte, pcall, setfenv, iscclosure, loadstring, math.floor, string.sub}
+                            for i = 1, #CheckAllThese do
+                                if (pcall(setfenv, CheckAllThese[i], {})) or (HookedCheck(CheckAllThese[i])) then
+                                    if debugeverything then
+                                        print("checkallthese"); return;
+                                    end
+                                    Crash();
+                                end
+                            end
+                        --- dont mess with above ---
+]]
+loadstring(game:HttpGet("https://raw.githubusercontent.com/SWIMHUBISWIMMING/cracked/refs/heads/main/surge.gg/assets/drawing"))()
+
+local function getCustomAsset(path)
+    if not isfile(path) then
+        writefile(path, crypt.base64.decode(path))
+    end
+    return getcustomasset(path)
+end
+
+local os_clock = os.clock();
+local FPS = string.split(game.Stats.Workspace.Heartbeat:GetValueString(), ".");
+local camera = game:GetService("Workspace").Camera;
+local Camera = game:GetService("Workspace").CurrentCamera
+local CharcaterMiddle = game:GetService("Workspace").Ignore.LocalCharacter.Middle
+local Mouse = game.Players.LocalPlayer:GetMouse()
+local lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local Decimals = 2
+local Clock = os.clock()
+local OsClock = os.clock()
+
+if not LPH_OBFUSCATED then
+    LPH_JIT = function(...) return ... end
+    LPH_JIT_MAX = function(...) return ... end
+    LPH_JIT_ULTRA = function(...) return ... end
+    LPH_NO_VIRTUALIZE = function(...) return ... end
+    LPH_ENCSTR = function(...) return ... end
+    LPH_STRENC = function(...) return ... end
+    LPH_HOOK_FIX = function(...) return ... end
+    LPH_CRASH = function() return print(debug.traceback()) end
+end;
+
+local RunService = game:GetService("RunService")
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+FOVCircle.Radius = 50
+FOVCircle.Color = Color3.fromRGB(45, 116, 202)
+FOVCircle.Visible = true
+
+local Line = Drawing.new("Line")
+Line.Color = Color3.fromRGB(255, 255, 255)
+Line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
+Line.Thickness = 1
+Line.Visible = true
+Line.ZIndex = 1
+
+local Decode = base64.decode
+
+local workspace = game.Workspace
+local playerListCache = {}
+local lastUpdated = 0
+local snaplineTarget = nil
+getgenv().SilentEnabled = true
+
+Config = {
+    Manipulation = {
+        Enabled = true,
+        Angles = 15,
+        Radius = 6,
+        Direction = "Normal",
+        Vector = Vector3.new(0, 0, 0)
+    },
+} 
+
+local modules = {
+    ["PlayerClient"] = {},
+    ["Character"] = {},
+    ["BowClient"] = {},
+    ["Camera"] = {},
+    ["RangedWeaponClient"] = {},
+    ["GetEquippedItem"] = {},
+    ["FPS"] = {},
+}
+
+for _, v in pairs(getgc(true)) do
+    if typeof(v) == "function" and islclosure(v) then
+        local info = debug.getinfo(v)
+        local name = string.match(info.short_src, "%.([%w_]+)$")
+
+        if name and modules[name] and info.name ~= nil then
+            modules[name][info.name] = info.func
+        end
+    end
+end
+
+local playerListCache = {}
+local snaplineTarget = nil
+
+local PlayerList = debug.getupvalue(modules.PlayerClient.updatePlayers, 1);
+
+if not PlayerList then
+    error("PlayerList function not found.")
+end
+
+local function GetPlayer()
+    local closest, playerTable = nil, nil
+    local closestMagnitude = math.huge
+    for _, v in pairs(debug.getupvalue(modules.PlayerClient.updatePlayers, 1) or {}) do
+        if v.type == "Player" and v.model:FindFirstChild("Head") and not v.sleeping then
+            local PartPos, OnScreen = Camera:WorldToViewportPoint(v.model:GetPivot().Position)
+            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+            local PlayerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v.model:GetPivot().Position).Magnitude
+
+            if Magnitude < FOVCircle.Radius and PlayerDistance <= 9999 and Magnitude < closestMagnitude and OnScreen then
+                closestMagnitude = Magnitude
+                closest = v.model
+                playerTable = v
+            end
+        end
+    end
+    return closest, playerTable
+end
+
+local function updateTarget()
+    local target = snaplineTarget
+    if target then
+        getgenv().Target = target
+    end
+end
+
+getgenv().PlayersVelocity = nil
+local function updateSnapline()
+    local Target, playerData = GetPlayer()
+    if Target and Target:FindFirstChild("Head") then
+        local headPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(Target.Head.Position)
+        Line.Visible = onScreen
+
+        if onScreen then
+            Line.To = Vector2.new(headPos.X, headPos.Y)
+            snaplineTarget = Target
+            getgenv().PlayersVelocity = playerData.velocityVector
+        else
+            snaplineTarget = nil
+            getgenv().PlayersVelocity = nil
+        end
+    else
+        Line.Visible = false
+        snaplineTarget = nil
+        getgenv().PlayersVelocity = nil
+    end
+end
+
+local CharacterList = debug.getupvalues(modules.Character.getGroundCastResult)
+
+local function GetProjectileInfo()
+    local equippedItem = CharacterList[2].GetEquippedItem()
+    
+    if equippedItem == nil then
+        return 0, 0
+    else
+        local projectileSpeed = equippedItem.ProjectileSpeed
+        local projectileDrop = equippedItem.ProjectileDrop
+        if projectileSpeed == nil or projectileDrop == nil then
+            return 0, 0
+        else
+            return projectileSpeed, projectileDrop
+        end
+    end
+end
+
+local Cam = workspace.CurrentCamera
+
+getgenv().Predict = function(Player, Velocity)
+    local PSpeed, PDrop = GetProjectileInfo()
+
+    if PSpeed and PDrop then
+        while true do
+            if Player.Position then
+                local Dist = (Player.Position - Cam.CFrame.Position).Magnitude
+                
+                if Dist > 0 then
+                    local TimeToHit = Dist / PSpeed 
+                    
+                    local PPos1 = Player.Position + (Velocity * TimeToHit * 3.4)
+                    
+                    local Drop = -PDrop ^ (TimeToHit * PDrop) + 1.1
+                    local PPos = PPos1 - Vector3.new(0, Drop, 0)
+                    
+                    return PPos, TimeToHit
+                end
+            end
+            
+            wait()
+        end
+    end
+    
+    return Vector3.new(0, 0, 0), nil
+end
+
+local OldHook
+local StackLVL = nil
+
+OldHook = hookmetamethod(Random.new(), "__namecall", newcclosure(function(self, ...) -- swimhub moment
+    if StackLVL == nil then
+        local Executor = identifyexecutor()
+
+        if Executor == "Nihon" then
+            StackLVL = 5
+        elseif Executor == "Delta" then
+            StackLVL = 4
+        elseif Executor == "Wave" then
+            StackLVL = 3
+        elseif Executor == "Arceus X" then
+            StackLVL = 3
+        elseif Executor == "Codex" then
+            StackLVL = 3
+        else
+            StackLVL = 3
+        end
+    end
+
+    local stack = debug.getstack(StackLVL, 4)
+
+    if stack and getgenv().SilentEnabled and getgenv().Target and getgenv().PlayersVelocity and Config.Manipulation.Enabled then
+        local targetHead = getgenv().Target.Head
+        local predictedPos = getgenv().Predict(targetHead, getgenv().PlayersVelocity)
+
+        if predictedPos then
+            local targetPos = CFrame.lookAt(workspace.CurrentCamera.CFrame.p, predictedPos) * CFrame.new(Config.Manipulation.Vector)
+            setstack(StackLVL, 4, targetPos)
+        end
+    end
+
+    return OldHook(self, ...)
+end))
+
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
+local workspace = game:GetService("Workspace")
+
+local drawingObjects = {
+    background = Drawing.new('Square'),
+    inside = Drawing.new('Square')
+}
+
+local barBackground = drawingObjects.background
+local barInside = drawingObjects.inside
+
+barBackground.Size = Vector2.new(115, 11)
+barInside.Size = Vector2.new(0, 11)
+barBackground.Color = Color3.fromRGB(24, 24, 24)
+barInside.Color = Color3.fromHSV(0.5, 1, 1)
+barBackground.Filled = true
+barInside.Filled = true
+
+local manipBarVisible = false
+local speed = 1
+local timeCounter = 0
+
+local function updateVisibility()
+    barBackground.Visible = manipBarVisible
+    barInside.Visible = manipBarVisible
+end
+
+local function updateManipulationBar()
+    if not getgenv().SilentEnabled then
+        speed = 1
+    else
+        if Config.Manipulation.Direction ~= "Normal" and Config.Manipulation.Enabled then
+            speed = 3
+        else
+            speed = 1
+        end
+    end
+
+    timeCounter = (timeCounter + RunService.Heartbeat:Wait() * speed) % 1
+    local barWidth = barBackground.Size.X
+    local screenCenter = GuiService:GetScreenResolution() / 2
+    local barCenter = screenCenter + Vector2.new(-barWidth / 2, 70)
+
+    barBackground.Position = barCenter
+    barInside.Position = barCenter - Vector2.new(timeCounter * barWidth / 2, 0) + Vector2.new(barWidth / 2, 1.6)
+    barInside.Size = Vector2.new(timeCounter * barWidth, 5.7)
+    barInside.Color = Color3.fromHSV(0.28 - (timeCounter / 4), 1, 1)
+    updateVisibility()
+end
+
+local function isPartVisibleFromPosition(part, observerPosition)
+    local direction = (part.Position - observerPosition).unit
+    local ray = Ray.new(observerPosition, direction * (part.Position - observerPosition).magnitude)
+    local ignore = workspace.Ignore:GetDescendants()
+    local hit = workspace:FindPartOnRayWithIgnoreList(ray, ignore)
+    return hit and hit.Name == part.Name
+end
+
+local function isAnyPartVisibleFromPosition(Target, partNames, observerPosition)
+    for _, partName in ipairs(partNames) do
+        local part = Target:FindFirstChild(partName)
+        if part and isPartVisibleFromPosition(part, observerPosition) then
+            return true
+        end
+    end
+    return false
+end
+
+local function calculateBestOffset(Target)
+    local bestDirection = "Normal"
+    local bestOffset = Vector3.new()
+
+    for angle = 0, 360, 45 do
+        local radianAngle = math.rad(angle)
+        for xOffset = 1, 3 do
+            for yOffset = -4, 4 do
+                local x = math.cos(radianAngle) * xOffset
+                local offset = Vector3.new(x, yOffset, 0)
+
+                if isAnyPartVisibleFromPosition(Target, {"Head", "Torso"}, game.Workspace.CurrentCamera.CFrame.Position + offset) then
+                    bestDirection = angle
+                    bestOffset = offset
+                    return bestDirection, bestOffset
+                end
+            end
+        end
+    end
+
+    return bestDirection, bestOffset
+end
+
+local function canHitTargetDirectly(Target)
+    local targetHead = Target:FindFirstChild("Head")
+    if targetHead then
+        return isAnyPartVisibleFromPosition(Target, {"Head", "Torso"}, game.Workspace.CurrentCamera.CFrame.Position)
+    end
+    return false
+end
+
+task.spawn(function()
+    while task.wait(0.3) do
+        if getgenv().SilentEnabled and Config.Manipulation then
+            local Target = GetPlayer()
+            if Target and Target:FindFirstChild("Head") then
+                if canHitTargetDirectly(Target) then
+                    Config.Manipulation.Direction = "Normal"
+                    Config.Manipulation.Vector = Vector3.new()
+                    manipBarVisible = false
+                else
+                    local bestDirection, bestOffset = calculateBestOffset(Target)
+                    if Target == nil then
+                        manipBarVisible = false
+                    end
+                    Config.Manipulation.Direction = bestDirection
+                    Config.Manipulation.Vector = bestDirection == "Normal" and Vector3.new() or bestOffset
+
+                    manipBarVisible = bestDirection ~= "Normal"
+                end
+            end
+        end
+    end
+end)
+
+local function onRenderStepped()
+    updateSnapline()
+    updateTarget()
+end
+
+RunService.RenderStepped:Connect(onRenderStepped)
+
+-- Removed the UI and tab-related code
+
+local rep = cloneref(game:GetService("ReplicatedStorage"))
+local ogmod = rep.Shared.entities.Player.Model
+
+local oldindex1
+oldindex1 = hookmetamethod(game, "__index", newcclosure(function(self, index)
+    if not checkcaller() and (index == "CanCollide" or index == "Transparency" or index == "Size") and (self.Name == "Torso" or self.Name == "Head") then
+        return ogmod[self.Name][index]
+    end
+    return oldindex1(self, index)
+end))
+
+local char = {}
+local h = { enabled = true, sizeX = 15, sizeY = 15, sizeZ = 15 }
+local maxSize = 50
+local processedCache = {}
+
+-- Function to update the hitbox for both players and NPCs
+function char:updatehitbox(v)
+    if v and v.model then
+        local humanoidRootPart = v.model:FindFirstChild("HumanoidRootPart")
+        local torso = v.model:FindFirstChild("Torso")
+        if torso then
+            torso.Size = h.enabled and Vector3.new(h.sizeX, h.sizeY, h.sizeZ) or Vector3.new(0.6530659198760986, 2.220424175262451, 1.4367451667785645)
+            torso.CanCollide = false
+            torso.Transparency = h.enabled and 0.8 or 0
+        end
+    end
+end
+
+-- Function to check and enforce max size constraints
+local function checkSizes()
+    local naughty = false
+    if h.sizeX > maxSize then
+        h.sizeX = maxSize
+        naughty = true
+    end
+    if h.sizeY > maxSize then
+        h.sizeY = maxSize
+        naughty = true
+    end
+    if h.sizeZ > maxSize then
+        h.sizeZ = maxSize
+        naughty = true
+    end
+    if naughty then
+        local Player = game:GetService("Players").LocalPlayer
+        -- Uncomment this to kick the player for exceeding size limits
+        -- Player:Kick("Reason Expected You Overrided A Check In Script")
+    end
+end
+
+-- Update hitbox when a new child is added to the workspace
+workspace.ChildAdded:Connect(function(v)
+    task.delay(1, function()
+        -- Check if the object added is a character model (player or NPC)
+        if v:FindFirstChild("Head") and v:FindFirstChild("Torso") then
+            processedCache[v] = nil
+            -- Update hitbox for the new character
+            char:updatehitbox({ model = v })
+        end
+    end)
+end)
+
+-- Update hitbox when a player is removed
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    for _, v in pairs(PlayerList) do
+        if v == player then
+            processedCache[v] = nil
+        end
+    end)
+end)
+
+-- Hook into character respawn to update the hitbox
+game:GetService("Players").PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        -- Wait for the character's torso to load
+        local torso = character:WaitForChild("Torso", 5)
+        local head = character:WaitForChild("Head", 5)
+        if torso and head then
+            processedCache[character] = nil
+            char:updatehitbox({ model = character })
+        end
+    end)
+end)
+
+local hitboxOverrider = true
+
+-- Function to generate scale factors based on pitch
+local function generateScaleFactors()
+    local scaleFactors = {}
+    local baseScales = {0.008, 0.009, 0.008}
+    local decrement = 0.0003
+
+    for pitch = 30, -10, -5 do
+        local scales = {}
+        if pitch >= 0 then
+            scales = {baseScales[1] - (30 - pitch) * decrement, baseScales[2] - (30 - pitch) * decrement, baseScales[3] - (30 - pitch) * decrement}
+        else
+            scales = {baseScales[1] - (30 + pitch) * decrement, baseScales[2] - (30 + pitch) * decrement, baseScales[3] - (30 + pitch) * decrement}
+        end
+        table.insert(scaleFactors, {threshold = pitch, scales = scales})
+    end
+
+    table.insert(scaleFactors, {threshold = -math.huge, scales = {0.006, 0.005, 0.006}})
+
+    return scaleFactors
+end
+
+local scaleFactors = generateScaleFactors()
+
+function char:GenVector(targetPos)
+    local direction = (targetPos - Camera.CFrame.Position).unit
+    local lookDirection = Camera.CFrame.LookVector
+
+    local pitch = math.deg(math.asin(lookDirection.Y))
+
+    local scaleValues = {0, 0, 0}
+
+    for _, entry in ipairs(scaleFactors) do
+        if pitch > entry.threshold then
+            scaleValues = entry.scales
+            break
+        end
+    end
+
+    local magnitude = (targetPos - Camera.CFrame.Position).Magnitude
+
+    return Vector3.new(
+        direction.X * (magnitude * scaleValues[1]),
+        direction.Y * (magnitude * scaleValues[2]),
+        direction.Z * (magnitude * scaleValues[3])
+    )
+end
+
+-- Hook the key press to toggle hitbox size
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.I then
+        -- Toggle the enabled state
+        h.enabled = not h.enabled
+
+        -- Update all models in the workspace that need updating
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:FindFirstChild("Head") and v:FindFirstChild("Torso") then
+                processedCache[v] = nil
+                char:updatehitbox({ model = v })
+            end
+        end
+    end
+end)
+
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+
+local oldIndex = mt.__namecall
+mt.__namecall = function(...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if method == "FireServer" then
+        local eventId, eventType, hitPart = args[2], args[3], args[7]
+
+        if eventId == 10 and eventType == "Hit" and hitPart == "Torso" or hitPart == "Head" then
+            local genVector = char:GenVector(args[9])
+            args[8] = Vector3.new(genVector.X, genVector.Y, genVector.Z)
+        end
+    end
+
+    return oldIndex(table.unpack(args))
+end
+
+local meta = getrawmetatable(game)
+setreadonly(meta, false)
+
+local oldIndex = meta.__namecall
+meta.__namecall = function(...)
+    local method = getnamecallmethod()
+    local args = {...}
+    if args[2] == 10 and args[3] == "Hit" and args[7] == "Torso" and hitboxoverrider then
+        args[7] = "Head"
+    end
+    return oldIndex(table.unpack(args))
+end
+
+setreadonly(meta, true)
+
+--Max Relative Look Extensive
+
+local trident = { -- swimhub moment start
+        loaded = false,
+        gc = {
+            isgrounded = nil,
+            character = nil,
+            camera = nil
+        },
+    }
+
+    LPH_JIT_MAX(function()
+        for i, v in pairs(getgc(true)) do
+            if type(v) == "table" then
+                if type(rawget(v, "updateCharacter")) == "function" then
+                    trident.gc.character = v
+                end
+                
+                if type(rawget(v, "SetMaxRelativeLookExtentsY")) == "function" then
+                    trident.gc.camera = v
+                end
+            end
+        end
+    end)()   
+
+    local noatvrestriction = true
+
+    task.spawn(function()
+        local thing = trident.gc.camera.SetMaxRelativeLookExtentsY
+        while wait() do
+            if noatvrestriction then thing(10000) end
+        end
+    end) -- swimhub moment end
+
 local modules = {
     ["PlayerClient"] = {},
     ["Character"] = {},
@@ -21,7 +662,7 @@ local lamae = debug.getupvalues(modules.Character.updateCharacter)
 local RunService, Camera = game:GetService("RunService"), workspace.CurrentCamera
 local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
-local Color3_fromRGB = Color3.fromRGB
+local Color3_fromRGB, Drawing_new, pairs, Vector2_new = Color3.fromRGB, Drawing.new, pairs, Vector2.new
 
 local settings = {
     killAura = {
@@ -41,41 +682,117 @@ local settings = {
         enabled = true,
         speed = 0.05,
         distance = 10,
-        entities = {"Cactus", "Tree", "Nitrate", "Stone", "Iron", " Safe"}
+        entities = {"Cactus", "Tree", "Nitrate", "Stone", "Iron",}
+    },
+    corpseESP = {
+        enabled = false,
+        textColor = Color3_fromRGB(255, 0, 0),
+        outlineColor = Color3_fromRGB(0, 0, 0),
+        unionColor = Color3_fromRGB(205, 205, 205)
+    },
+    atvESP = {
+        enabled = true,
+        textColor = Color3_fromRGB(0, 255, 0),
+        outlineColor = Color3_fromRGB(0, 0, 0)
     }
 }
 
-local function GetLocalToolName()
-    if not CharacterList or not CharacterList[2] or not CharacterList[2].GetEquippedItem then
-        return "nothing you pooron"
-    end
-    local equippedItem = CharacterList[2].GetEquippedItem()
-    return equippedItem and equippedItem.type or "nothing you pooron"
+local CorpseCaches, ATVCache = {}, {}
+
+-- Toggle function for corpseESP and atvESP
+local function ToggleCorpseESP()
+    settings.corpseESP.enabled = not settings.corpseESP.enabled
 end
 
-local function GetClosestPlayer()
-    local closest, playerTable, closestMagnitude = nil, nil, math.huge
-    local localCharPos = workspace.Ignore.LocalCharacter.Middle.Position
+local function ToggleATVESP()
+    settings.atvESP.enabled = not settings.atvESP.enabled
+end
 
-    for _, v in pairs(PlayerList or {}) do
-        if v.type == "Player" and v.model then
-            local humanoidRootPart = v.model:FindFirstChild("HumanoidRootPart")
-            if humanoidRootPart and not v.sleeping then
-                local playerDistance = (localCharPos - humanoidRootPart.Position).Magnitude
-                if playerDistance <= settings.killAura.distance then
-                    local magnitude = (Camera:WorldToViewportPoint(humanoidRootPart.Position) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if magnitude < closestMagnitude then
-                        closestMagnitude = magnitude
-                        closest = v.model
-                        playerTable = v
-                    end
+workspace.ChildAdded:Connect(function(child)
+    if settings.corpseESP.enabled then
+        local unionOp = child:FindFirstChildOfClass("UnionOperation")
+        if unionOp and unionOp.Color == settings.corpseESP.unionColor then
+            local corpseCache = Drawing_new("Text")
+            corpseCache.Size = 10
+            corpseCache.Color = settings.corpseESP.textColor
+            corpseCache.Outline = true
+            corpseCache.OutlineColor = settings.corpseESP.outlineColor
+            CorpseCaches[child] = corpseCache
+        end
+    end
+
+    if settings.atvESP.enabled then
+        local seat = child:FindFirstChild("Seat")
+        local plastics = child:FindFirstChild("Plastics")
+        if seat and plastics then
+            local atvHighlight = Drawing_new("Text")
+            atvHighlight.Size = 10
+            atvHighlight.Color = settings.atvESP.textColor
+            atvHighlight.Outline = true
+            atvHighlight.OutlineColor = settings.atvESP.outlineColor
+            ATVCache[child] = atvHighlight
+        end
+    end
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    local corpseCache = CorpseCaches[child]
+    if corpseCache then
+        corpseCache:Remove()
+        CorpseCaches[child] = nil
+    end
+    local atvHighlight = ATVCache[child]
+    if atvHighlight then
+        atvHighlight:Remove()
+        ATVCache[child] = nil
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if settings.corpseESP.enabled then
+        for corpse, corpseCache in pairs(CorpseCaches) do
+            local primaryPart = corpse.PrimaryPart
+            if primaryPart then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
+                local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
+                corpseCache.Visible = onScreen
+                if corpseCache.Visible then
+                    corpseCache.Text = "Corpse [" .. math.floor(distance) .. "]"
+                    corpseCache.Position = Vector2_new(screenPos.X, screenPos.Y)
                 end
             end
         end
     end
-    return closest, playerTable
-end
 
+    if settings.atvESP.enabled then
+        for atv, atvHighlight in pairs(ATVCache) do
+            local primaryPart = atv.PrimaryPart
+            if primaryPart then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
+                local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
+                atvHighlight.Visible = onScreen
+                if atvHighlight.Visible then
+                    atvHighlight.Text = "ATV [" .. math.floor(distance) .. "]"
+                    atvHighlight.Position = Vector2_new(screenPos.X, screenPos.Y)
+                end
+            end
+        end
+    end
+end)
+
+-- Key press toggle handling for CorpseESP and ATVESP
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.@ then -- "@" key
+        ToggleATVESP()
+    elseif input.KeyCode == Enum.KeyCode.# then -- "#" key
+        ToggleCorpseESP()
+    end
+end)
+
+-- Kill Aura and Silent Farm code stays unchanged
+-- Kill Aura loop
 task.spawn(function()
     while task.wait(0.01) do
         if settings.killAura.enabled then
@@ -92,6 +809,7 @@ task.spawn(function()
     end
 end)
 
+-- Silent Farm loop
 task.spawn(function()
     while task.wait(0.01) do
         if settings.silentFarm.enabled then
@@ -123,3 +841,7 @@ task.spawn(function()
                 end
             end
         else
+            task.wait(0.5)
+        end
+    end
+end)
