@@ -611,8 +611,8 @@ local settings = {
         hitPart = "Head"
     },
     silentFarm = {
-        enabled = false,
-        speed = 2,
+        enabled = true,
+        speed = 1.3,
         distance = 10,
         entities = {"Cactus", "Tree", "Nitrate", "Stone", "Iron"}
     },
