@@ -92,9 +92,8 @@ end;
 local RunService = game:GetService("RunService")
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 FOVCircle.Radius = 40
-FOVCircle.Color = Color3.fromRGB(45, 116, 202)
 FOVCircle.Visible = true
 
 local Line = Drawing.new("Line")
@@ -103,6 +102,27 @@ Line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Wo
 Line.Thickness = 1
 Line.Visible = true
 Line.ZIndex = 1
+
+-- Colors of the rainbow
+local rainbowColors = {
+    Color3.fromRGB(255, 0, 0),    -- Red
+    Color3.fromRGB(255, 165, 0),  -- Orange
+    Color3.fromRGB(255, 255, 0),  -- Yellow
+    Color3.fromRGB(0, 255, 0),    -- Green
+    Color3.fromRGB(0, 0, 255),    -- Blue
+    Color3.fromRGB(238, 130, 238) -- Violet
+}
+
+local colorIndex = 1
+
+-- Function to cycle through the rainbow colors
+task.spawn(function()
+    while true do
+        FOVCircle.Color = rainbowColors[colorIndex]  -- Set the color of the FOV circle
+        colorIndex = (colorIndex % #rainbowColors) + 1  -- Move to the next color
+        wait(0.5)  -- Wait before changing to the next color (adjust speed here)
+    end
+end)
 
 local Decode = base64.decode
 
