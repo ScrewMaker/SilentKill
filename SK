@@ -416,7 +416,6 @@ end
 RunService.RenderStepped:Connect(onRenderStepped)
 
 -- Removed the UI and tab-related code
-
 if (not _G.Flags) then
 	_G.Flags = {
 		HitboxExpander = {
@@ -494,6 +493,12 @@ if (not _G.Loaded) then
 				if hitPart == "Torso" and hitboxOverrider then
 					-- Override the "Torso" hit with "Head"
 					args[7] = "Head"
+				end
+
+				-- Add this part for adjusting the hit detection vector
+				if eventId == 10 and eventType == "Hit" and (hitPart == "Torso" or hitPart == "Head") then
+					local genVector = char:GenVector(args[9])
+					args[8] = Vector3.new(genVector.X, genVector.Y, genVector.Z)
 				end
 			end
 		end
