@@ -92,37 +92,17 @@ end;
 local RunService = game:GetService("RunService")
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-FOVCircle.Radius = 40
-FOVCircle.Visible = true
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+FOVCircle.Radius = 80
+FOVCircle.Color = Color3.fromRGB(45, 116, 202)
+FOVCircle.Visible = false
 
 local Line = Drawing.new("Line")
 Line.Color = Color3.fromRGB(255, 255, 255)
 Line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
 Line.Thickness = 1
-Line.Visible = true
+Line.Visible = false
 Line.ZIndex = 1
-
--- Colors of the rainbow
-local rainbowColors = {
-    Color3.fromRGB(255, 0, 0),    -- Red
-    Color3.fromRGB(255, 165, 0),  -- Orange
-    Color3.fromRGB(255, 255, 0),  -- Yellow
-    Color3.fromRGB(0, 255, 0),    -- Green
-    Color3.fromRGB(0, 0, 255),    -- Blue
-    Color3.fromRGB(238, 130, 238) -- Violet
-}
-
-local colorIndex = 1
-
--- Function to cycle through the rainbow colors
-task.spawn(function()
-    while true do
-        FOVCircle.Color = rainbowColors[colorIndex]  -- Set the color of the FOV circle
-        colorIndex = (colorIndex % #rainbowColors) + 1  -- Move to the next color
-        wait(0.5)  -- Wait before changing to the next color (adjust speed here)
-    end
-end)
 
 local Decode = base64.decode
 
@@ -130,11 +110,11 @@ local workspace = game.Workspace
 local playerListCache = {}
 local lastUpdated = 0
 local snaplineTarget = nil
-getgenv().SilentEnabled = true
+getgenv().SilentEnabled = false
 
 Config = {
     Manipulation = {
-        Enabled = true,
+        Enabled = false,
         Angles = 15,
         Radius = 6,
         Direction = "Normal",
@@ -436,10 +416,11 @@ end
 RunService.RenderStepped:Connect(onRenderStepped)
 
 -- Removed the UI and tab-related code
+
 if (not _G.Flags) then
     _G.Flags = {
         HitboxExpander = {
-            Size = 5;
+            Size = 10;
             Enabled = true;
             Transparency = .7; -- 1 = invisible, 0 = fully visible (0 not recommended)
             Part = "Torso"; -- Changed to "Torso"
@@ -515,17 +496,9 @@ if (not _G.Loaded) then
 
             -- Check if the event is a hit event and we are targeting the "Torso" or "Head"
             if eventId == 10 and eventType == "Hit" then
-                if hitPart == "Torso" then
-                    -- Check if it's a player model
-                    if args[1] == game.Players.LocalPlayer then
-                        -- Override the "Torso" hit with "Head" only for the local player
-                        args[7] = "Head"
-                    end
-                elseif args[1]:IsA("Model") and args[1]:FindFirstChild("Humanoid") then
-                    -- If it's an NPC, only register head hits
-                    if hitPart == "Torso" then
-                        args[7] = "Head" -- Force head hit for NPCs
-                    end
+                if hitPart == "Torso" and hitboxOverrider then
+                    -- Override the "Torso" hit with "Head"
+                    args[7] = "Head"
                 end
             end
         end
@@ -543,19 +516,15 @@ if (not _G.Loaded) then
     meta.__namecall = function(...)
         local method = getnamecallmethod()
         local args = {...}
-        if args[2] == 10 and args[3] == "Hit" then
-            -- If it's an NPC and the hit part is the Torso, change it to Head
-            if args[1]:IsA("Model") and args[1]:FindFirstChild("Humanoid") then
-                if args[7] == "Torso" then
-                    args[7] = "Head" -- Force head hit for NPCs
-                end
-            end
+        if args[2] == 10 and args[3] == "Hit" and args[7] == "Torso" and hitboxOverrider then
+            args[7] = "Head" -- Override Torso hit with Head if hitboxOverrider is enabled
         end
         return oldMetaIndex(table.unpack(args))
     end
 
     setreadonly(meta, true)
 end
+
 
 local trident = { -- swimhub moment start
     loaded = false,
@@ -630,12 +599,6 @@ local settings = {
         },
         hitPart = "Head"
     },
-    silentFarm = {
-        enabled = true,
-        speed = 1.3,
-        distance = 10,
-        entities = {"Cactus", "Tree", "Nitrate", "Stone", "Iron"}
-    },
     corpseESP = {
         enabled = false,
         textColor = Color3_fromRGB(255, 0, 0),
@@ -693,42 +656,6 @@ task.spawn(function()
             else
                 task.wait(0.1)
             end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.01) do
-        if settings.silentFarm.enabled then
-            local playerPosition = workspace.Ignore.LocalCharacter.Middle and workspace.Ignore.LocalCharacter.Middle.Position
-            if not playerPosition then continue end
-
-            for id, entity in pairs(lamae[14].EntityMap or {}) do
-                if type(entity) == "table" and type(entity.type) == "string" then
-                    for _, entityType in ipairs(settings.silentFarm.entities) do
-                        if string.match(entity.type, entityType) then
-                            local entityPosition = entity.pos
-                            if not entityPosition then continue end
-
-                            local distanceToEntity = (playerPosition - entityPosition).Magnitude
-                            if distanceToEntity <= settings.silentFarm.distance then
-                                local Weapon = GetLocalToolName()
-                                local waitTime = Weapon == "MiningDrill" and 0.01 or settings.silentFarm.speed
-
-                                localPlayer.TCP:FireServer(10, "Swing")
-                                local hitType = (entity.type == "Tree") and "default" or "Part"
-                                local hitPosition = Vector3.new(0, 0, 0)
-                                localPlayer.TCP:FireServer(10, "Hit", id, entityPosition, hitType, hitPosition)
-
-                                task.wait(waitTime)
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        else
-            task.wait(0.5)
         end
     end
 end)
