@@ -421,14 +421,14 @@ if (not _G.Flags) then
     _G.Flags = {
         HitboxExpander = {
             Size = 10;
-            Enabled = false;
+            Enabled = true;
             Transparency = .7; -- 1 = invisible, 0 = fully visible (0 not recommended)
             Part = "Torso"; -- Changed to "Torso"
         };
     };
 end
 
-local hitboxOverrider = false -- Enable hitbox overrider
+local hitboxOverrider = true -- Enable hitbox overrider
 
 if (not _G.Loaded) then
     _G.Loaded = true;
