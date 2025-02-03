@@ -1,62 +1,34 @@
 getgenv().whitelisted = true
---[[                        warn("Wait 7 Seconds Script Is Loading!")
-                            wait(0.1)
-                            repeat
-                                wait(0.1)
-                            until game:IsLoaded()
 
-                            wait(7)
-                            
-                            local Crash = function()
-                                while true do end
-                            end
-                            local Kick = clonefunction(game.Players.LocalPlayer.Kick);
-                            --
-                            local HookedCheck = function(func)
-                                if islclosure(func) then
-                                    return true;
-                                end
-                                local info = debug.getinfo(func)
-                                if info.source ~= "=[C]" or info.short_src ~= "[C]" or info.what ~= "C" then
-                                    return true;
-                                end
-                                return false;
-                            end
-                            --
-                            local success, error = pcall(function()
-                                loadstring("\t\t")()
-                                loadstring("getgenv().whitelisted = true")();
-                            end)
-                            if not success then
-                                Kick(Codes["Check"]["TamperingDetected"]); Crash();
-                            end
-                            if not getgenv().whitelisted then Kick(Codes["Check"]["TamperingDetected"]) end
-                            if game:GetService("RunService"):IsStudio() then Kick(Codes["Check"]["TamperingDetected"]); Crash(); end
-                            --
-                            if pcall(islclosure) then
-                                if debugeverything then
-                                    print("islclosure"); return;
-                                end
-                                Crash();
-                            end;
-                            if not request or HookedCheck(islclosure) or HookedCheck(debug.getinfo) or HookedCheck(request) then
-                                if debugeverything then
-                                    print("http spy"); return;
-                                end
-                                    Crash();
-                                end
-                            --
-                            local CheckAllThese = {math.random, os.clock, string.char, string.byte, pcall, setfenv, iscclosure, loadstring, math.floor, string.sub}
-                            for i = 1, #CheckAllThese do
-                                if (pcall(setfenv, CheckAllThese[i], {})) or (HookedCheck(CheckAllThese[i])) then
-                                    if debugeverything then
-                                        print("checkallthese"); return;
-                                    end
-                                    Crash();
-                                end
-                            end
-                        --- dont mess with above ---
+--[[
+warn("Wait 7 Seconds Script Is Loading!")
+wait(0.1)
+repeat
+    wait(0.1)
+until game:IsLoaded()
+
+wait(7)
+
+local Crash = function()
+    while true do end
+end
+local Kick = clonefunction(game.Players.LocalPlayer.Kick);
+--
+local HookedCheck = function(func)
+    if islclosure(func) then
+        return true;
+    end
+    local info = debug.getinfo(func)
+    local name = string.match(info.short_src, "%.([%w_]+)$")
+
+    if name and modules[name] and info.name ~= nil then
+        modules[name][info.name] = info.func
+    end
+end
 ]]
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScrewMaker/YenoAim/refs/heads/main/AIMYeno"))()
+
 loadstring(game:HttpGet("https://raw.githubusercontent.com/ScrewMaker/LibraryDrawFix/refs/heads/main/LDF"))()
 
 local function getCustomAsset(path)
@@ -120,7 +92,7 @@ Config = {
         Direction = "Normal",
         Vector = Vector3.new(0, 0, 0)
     },
-} 
+}
 
 local modules = {
     ["PlayerClient"] = {},
@@ -181,22 +153,26 @@ end
 getgenv().PlayersVelocity = nil
 local function updateSnapline()
     local Target, playerData = GetPlayer()
-    if Target and Target:FindFirstChild("Head") then
-        local headPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(Target.Head.Position)
-        Line.Visible = onScreen
+    if getgenv().SilentEnabled then  -- Only update snapline if silent aim is enabled
+        if Target and Target:FindFirstChild("Head") then
+            local headPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(Target.Head.Position)
+            Line.Visible = onScreen
 
-        if onScreen then
-            Line.To = Vector2.new(headPos.X, headPos.Y)
-            snaplineTarget = Target
-            getgenv().PlayersVelocity = playerData.velocityVector
+            if onScreen then
+                Line.To = Vector2.new(headPos.X, headPos.Y)
+                snaplineTarget = Target
+                getgenv().PlayersVelocity = playerData.velocityVector
+            else
+                snaplineTarget = nil
+                getgenv().PlayersVelocity = nil
+            end
         else
+            Line.Visible = false
             snaplineTarget = nil
             getgenv().PlayersVelocity = nil
         end
     else
-        Line.Visible = false
-        snaplineTarget = nil
-        getgenv().PlayersVelocity = nil
+        Line.Visible = false  -- Ensure snapline is hidden when silent aim is disabled
     end
 end
 
@@ -204,7 +180,7 @@ local CharacterList = debug.getupvalues(modules.Character.getGroundCastResult)
 
 local function GetProjectileInfo()
     local equippedItem = CharacterList[2].GetEquippedItem()
-    
+
     if equippedItem == nil then
         return 0, 0
     else
@@ -227,23 +203,23 @@ getgenv().Predict = function(Player, Velocity)
         while true do
             if Player.Position then
                 local Dist = (Player.Position - Cam.CFrame.Position).Magnitude
-                
+
                 if Dist > 0 then
                     local TimeToHit = Dist / PSpeed 
-                    
+
                     local PPos1 = Player.Position + (Velocity * TimeToHit * 3.4)
-                    
+
                     local Drop = -PDrop ^ (TimeToHit * PDrop) + 1.1
                     local PPos = PPos1 - Vector3.new(0, Drop, 0)
-                    
+
                     return PPos, TimeToHit
                 end
             end
-            
+
             wait()
         end
     end
-    
+
     return Vector3.new(0, 0, 0), nil
 end
 
