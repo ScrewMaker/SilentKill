@@ -358,7 +358,7 @@ RunService.RenderStepped:Connect(onRenderStepped)
 if (not _G.Flags) then
     _G.Flags = {
         HitboxExpander = {
-            Size = 14;
+            Size = 12;
             Enabled = true;
             Transparency = .7; -- 1 = invisible, 0 = fully visible (0 not recommended)
             Part = "Torso"; -- Changed to "Torso"
