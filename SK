@@ -355,113 +355,160 @@ end
 
 RunService.RenderStepped:Connect(onRenderStepped)
 
-if (not _G.Flags) then
-    _G.Flags = {
-        HitboxExpander = {
-            Size = 12;
-            Enabled = true;
-            Transparency = .7; -- 1 = invisible, 0 = fully visible (0 not recommended)
-            Part = "Torso"; -- Changed to "Torso"
-        };
-    };
+local char = {}
+local h = { enabled = true, sizeX = 13, sizeY = 13, sizeZ = 13 }
+local maxSize = 50
+local processedCache = {}
+
+function char:updatehitbox()
+    -- Loop through all players and NPCs in the game
+    for _, v in pairs(workspace:GetChildren()) do
+        -- Only process the model if it's a valid humanoid or NPC model
+        if v:FindFirstChild("HumanoidRootPart") and not processedCache[v] then
+            local humanoid = v:FindFirstChild("Humanoid")
+            
+            -- If it's a player, update the hitbox, or if it's an NPC model, treat it as one
+            if (humanoid and humanoid.Health > 0) or v:FindFirstChild("Head") then
+                local torso = v:FindFirstChild("Torso")
+                if torso then
+                    torso.Size = h.enabled and Vector3.new(h.sizeX, h.sizeY, h.sizeZ) or Vector3.new(0.6530659198760986, 2.220424175262451, 1.4367451667785645)
+                    torso.CanCollide = false
+                    torso.Transparency = h.enabled and 0.8 or 0
+                end
+                processedCache[v] = true
+            end
+        end
+    end
 end
 
-local hitboxOverrider = true -- Enable hitbox overrider
-
-if (not _G.Loaded) then
-    _G.Loaded = true;
-    local ReplicatedStorage = game:GetService("ReplicatedStorage");
-    local RunService = game:GetService("RunService");
-    local CoreGui = game:GetService("CoreGui");
-    local CurrentCamera = workspace.CurrentCamera;
-    local IgnoreFolder = workspace:WaitForChild("Ignore");
-    local OriginalSizes = {};
-    local WeaponInfo = {};
-
-    -- Save original sizes of parts
-    for i, v in pairs(ReplicatedStorage.Shared.entities.Player.Model:GetChildren()) do
-        if v:IsA("BasePart") then
-            OriginalSizes[v.Name] = v.Size;
-        end
+local function checkSizes()
+    local naughty = false
+    if h.sizeX > maxSize then
+        h.sizeX = maxSize
+        naughty = true
     end
-
-    -- Function to apply the hitbox expansion or revert to original size
-    function HitboxExpander(Model, Size, Hitbox)
-        if (Hitbox.Enabled) then
-            local Part = Model:FindFirstChild(Hitbox.Part);
-            if Part then
-                Part.Size = Vector3.new(Size, Size, Size);
-                Part.Transparency = Hitbox.Transparency;
-                Part.CanCollide = false;
-            end
-        else
-            local Part = Model:FindFirstChild(Hitbox.Part);
-            if Part then
-                Part.Size = OriginalSizes[Hitbox.Part];
-                Part.Transparency = 0;
-                Part.CanCollide = true;
-            end
-        end
+    if h.sizeY > maxSize then
+        h.sizeY = maxSize
+        naughty = true
     end
+    if h.sizeZ > maxSize then
+        h.sizeZ = maxSize
+        naughty = true
+    end
+    if naughty then
+        local Player = game:GetService("Players").LocalPlayer
+        -- bro
+        -- Player:Kick("Reason Expected You Overrided A Check In Script")
+    end
+end
 
-    -- Continuously apply the hitbox expansion in the game loop
-    RunService.Heartbeat:Connect(function()
-        local Hitbox = _G.Flags.HitboxExpander;
-        for i, v in pairs(workspace:GetChildren()) do
-            if v:IsA("Model") and v:FindFirstChild("Torso") and v.PrimaryPart ~= nil then
-                local PrimaryPosition = v.PrimaryPart.Position;
-                local Origin = CurrentCamera.CFrame.Position;
-                local Distance = (Origin - PrimaryPosition).Magnitude;
-
-                -- Apply hitbox expansion based on settings
-                HitboxExpander(v, Hitbox.Size, Hitbox);
-            end
+workspace.ChildAdded:Connect(function(v)
+    task.delay(1, function()
+        if v:FindFirstChild("Head") or v:FindFirstChild("Torso") then
+            processedCache[v] = nil
+            char:updatehitbox()
         end
     end)
+end)
 
-    -- Add the hitbox overrider functionality here
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
+game:GetService("Players").PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        -- Make sure to reset the processed cache when a new character joins
+        processedCache[character] = nil
+        char:updatehitbox()
+    end)
+end)
 
-    local oldIndex = mt.__namecall
-    mt.__namecall = function(...)
-        local method = getnamecallmethod()
-        local args = {...}
-
-        -- Only modify the FireServer call
-        if method == "FireServer" then
-            local eventId, eventType, hitPart = args[2], args[3], args[7]
-
-            -- Check if the event is a hit event and we are targeting the "Torso" or "Head"
-            if eventId == 10 and eventType == "Hit" then
-                if hitPart == "Torso" and hitboxOverrider then
-                    -- Override the "Torso" hit with "Head"
-                    args[7] = "Head"
-                end
-            end
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    for _, v in pairs(workspace:GetChildren()) do
+        if v == player.Character then
+            processedCache[v] = nil
         end
+    end
+end)
 
-        return oldIndex(table.unpack(args))
+local hitboxOverrider = true
+
+local function generateScaleFactors()
+    local scaleFactors = {}
+    local baseScales = {0.008, 0.009, 0.008}
+    local decrement = 0.0003
+
+    for pitch = 30, -10, -5 do
+        local scales = {}
+        if pitch >= 0 then
+            scales = {baseScales[1] - (30 - pitch) * decrement, baseScales[2] - (30 - pitch) * decrement, baseScales[3] - (30 - pitch) * decrement}
+        else
+            scales = {baseScales[1] - (30 + pitch) * decrement, baseScales[2] - (30 + pitch) * decrement, baseScales[3] - (30 + pitch) * decrement}
+        end
+        table.insert(scaleFactors, {threshold = pitch, scales = scales})
     end
 
-    setreadonly(mt, true)
+    table.insert(scaleFactors, {threshold = -math.huge, scales = {0.006, 0.005, 0.006}})
 
-    -- Additional check on a separate metatable for the same purpose (if needed)
-    local meta = getrawmetatable(game)
-    setreadonly(meta, false)
-
-    local oldMetaIndex = meta.__namecall
-    meta.__namecall = function(...)
-        local method = getnamecallmethod()
-        local args = {...}
-        if args[2] == 10 and args[3] == "Hit" and args[7] == "Torso" and hitboxOverrider then
-            args[7] = "Head" -- Override Torso hit with Head if hitboxOverrider is enabled
-        end
-        return oldMetaIndex(table.unpack(args))
-    end
-
-    setreadonly(meta, true)
+    return scaleFactors
 end
+
+local scaleFactors = generateScaleFactors()
+
+function char:GenVector(targetPos)
+    local direction = (targetPos - Camera.CFrame.Position).unit
+    local lookDirection = Camera.CFrame.LookVector
+
+    local pitch = math.deg(math.asin(lookDirection.Y))
+
+    local scaleValues = {0, 0, 0}
+
+    for _, entry in ipairs(scaleFactors) do
+        if pitch > entry.threshold then
+            scaleValues = entry.scales
+            break
+        end
+    end
+
+    local magnitude = (targetPos - Camera.CFrame.Position).Magnitude
+
+    return Vector3.new(
+        direction.X * (magnitude * scaleValues[1]),
+        direction.Y * (magnitude * scaleValues[2]),
+        direction.Z * (magnitude * scaleValues[3])
+    )
+end
+
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+
+local oldIndex = mt.__namecall
+mt.__namecall = function(...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if method == "FireServer" then
+        local eventId, eventType, hitPart = args[2], args[3], args[7]
+
+        if eventId == 10 and eventType == "Hit" and (hitPart == "Torso" or hitPart == "Head") then
+            local genVector = char:GenVector(args[9])
+            args[8] = Vector3.new(genVector.X, genVector.Y, genVector.Z)
+        end
+    end
+
+    return oldIndex(table.unpack(args))
+end
+
+local meta = getrawmetatable(game)
+setreadonly(meta, false)
+
+local oldIndex = meta.__namecall
+meta.__namecall = function(...)
+    local method = getnamecallmethod()
+    local args = {...}
+    if args[2] == 10 and args[3] == "Hit" and args[7] == "Torso" and hitboxOverrider then
+        args[7] = "Head"
+    end
+    return oldIndex(table.unpack(args))
+end
+
+setreadonly(meta, true)
 
 local trident = { -- swimhub moment start
     loaded = false,
