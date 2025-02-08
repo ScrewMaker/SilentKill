@@ -397,8 +397,8 @@ local function checkSizes()
     end
     if naughty then
         local Player = game:GetService("Players").LocalPlayer
-        -- bro
-        -- Player:Kick("Reason Expected You Overrided A Check In Script")
+        -- Kick the player for overriding the size check
+        -- Player:Kick("Reason: Expected You Overrided A Check In Script")
     end
 end
 
