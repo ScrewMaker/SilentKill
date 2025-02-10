@@ -1,71 +1,26 @@
-getgenv().whitelisted = true
+-- FABRICATED VALUES
+local SWG_DiscordUser  = "swim"
+local SWG_DiscordID = 1337
+local SWG_Private = true
+local SWG_Dev = false
+local SWG_Version = "dev"
+local SWG_Title = '$$$  swimhub<font color="rgb(166, 0, 255)">.xyz</font> %s - %s  $$$'
+local SWG_ShortName = 'dev'
+local SWG_FullName = 'indev build'
+-- FABRICATED VALUES END
 
---[[
-warn("Wait 7 Seconds Script Is Loading!")
-wait(0.1)
-repeat
-    wait(0.1)
-until game:IsLoaded()
+local workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-wait(7)
-
-local Crash = function()
-    while true do end
-end
-local Kick = clonefunction(game.Players.LocalPlayer.Kick);
---
-local HookedCheck = function(func)
-    if islclosure(func) then
-        return true;
-    end
-    local info = debug.getinfo(func)
-    local name = string.match(info.short_src, "%.([%w_]+)$")
-
-    if name and modules[name] and info.name ~= nil then
-        modules[name][info.name] = info.func
-    end
-end
-]]
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScrewMaker/YenoAim/refs/heads/main/AIMYeno"))()
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScrewMaker/LibraryDrawFix/refs/heads/main/LDF"))()
-
-local function getCustomAsset(path)
-    if not isfile(path) then
-        writefile(path, crypt.base64.decode(path))
-    end
-    return getcustomasset(path)
-end
-
-local os_clock = os.clock();
-local FPS = string.split(game.Stats.Workspace.Heartbeat:GetValueString(), ".");
-local camera = game:GetService("Workspace").Camera;
-local Camera = game:GetService("Workspace").CurrentCamera
-local CharcaterMiddle = game:GetService("Workspace").Ignore.LocalCharacter.Middle
-local Mouse = game.Players.LocalPlayer:GetMouse()
-local lighting = game:GetService("Lighting")
-local SoundService = game:GetService("SoundService")
-local Decimals = 2
-local Clock = os.clock()
-local OsClock = os.clock()
-
-if not LPH_OBFUSCATED then
-    LPH_JIT = function(...) return ... end
-    LPH_JIT_MAX = function(...) return ... end
-    LPH_JIT_ULTRA = function(...) return ... end
-    LPH_NO_VIRTUALIZE = function(...) return ... end
-    LPH_ENCSTR = function(...) return ... end
-    LPH_STRENC = function(...) return ... end
-    LPH_HOOK_FIX = function(...) return ... end
-    LPH_CRASH = function() return print(debug.traceback()) end
-end;
+local trident = {
+    original_model = game:GetService("ReplicatedStorage").Shared.entities.Player.Model
+}
 
 local validcharacters = {}
-local hbc, original_size = nil, Vector3.new(1, 1, 1) -- Default size
-local hbsize = Vector3.new(15, 15, 15)
-local cancollide = false
-local hitboxheadtransparency = 0.7
+local hbc, original_size, hbsize = nil, trident.original_model.Head.Size, Vector3.new(0.5, 1, 0.5)
+local hitboxheadsizex, hitboxheadsizey, hitboxheadtransparency, cancollide = 15, 15, 0.5, false
 
 local function addtovc(obj)
     if not obj then return end
@@ -78,36 +33,29 @@ local function removefromvc(obj)
     validcharacters[obj] = nil
 end
 
-for _, v in ipairs(workspace:GetChildren()) do 
-    addtovc(v) 
-end
-
+for i, v in next, workspace:GetChildren() do addtovc(v) end
 workspace.ChildAdded:Connect(addtovc)
 workspace.ChildRemoved:Connect(removefromvc)
 
-local RunService = game:GetService("RunService")
-
-local function enable_hitbox(value)
-    if hbc then 
-        hbc:Disconnect() 
-    end
-    if value then
-        hbc = RunService.Heartbeat:Connect(function()
-            for _, v in pairs(validcharacters) do
-                local primpart = v:FindFirstChild("Head")
-                if primpart then
-                    primpart.Size = hbsize
-                    primpart.Transparency = hitboxheadtransparency
-                    primpart.CanCollide = cancollide
-                end
-            end
-        end)
-    else
-        if hbc then 
-            hbc:Disconnect() 
+local function updateHitboxes()
+    local trans = hitboxheadtransparency
+    for i, v in validcharacters do
+        local primpart = v and v:FindFirstChild('Head')
+        if primpart then
+            primpart.Size = Vector3.new(hitboxheadsizex, hitboxheadsizey, hitboxheadsizex)
+            primpart.Transparency = trans
+            primpart.CanCollide = cancollide
         end
-        for _, v in pairs(validcharacters) do
-            local primpart = v:FindFirstChild("Head")
+    end
+end
+
+local function enableHitboxes(true)
+    if value then
+        hbc = RunService.Heartbeat:Connect(updateHitboxes)
+    else
+        if hbc then hbc:Disconnect() end
+        for i, v in validcharacters do
+            local primpart = v and v:FindFirstChild('Head')
             if primpart then
                 primpart.Size = original_size
                 primpart.Transparency = 0
@@ -117,160 +65,94 @@ local function enable_hitbox(value)
     end
 end
 
-enable_hitbox(true)
+-- Long Neck Variables
+local longNeckEnabled = false
+local originalPrismCFrame = workspace.Const.Ignore.LocalCharacter.Top.Prism1.CFrame
 
-local trident = {
-    loaded = false,
-    gc = {
-        isgrounded = nil,
-        character = nil,
-        camera = nil
-    },
-}
+-- ATV Fly Variables
+local atvFlyEnabled = false
+local atvSpeed = 55
+local atvUpSpeed = 15
+local atvAccel = 100
+local atvCar = nil
+local atvDist = 50
+local atvBuildup = 0
+local atvLastDir = Vector3.new(1, 0, 0)
 
-LPH_JIT_MAX(function()
-    for i, v in pairs(getgc(true)) do
-        if type(v) == "table" then
-            if type(rawget(v, "updateCharacter")) == "function" then
-                trident.gc.character = v
-            end
-
-            if type(rawget(v, "SetMaxRelativeLookExtentsY")) == "function" then
-                trident.gc.camera = v
-            end
-        end
-    end
-end)()
-
-local noatvrestriction = true
-
-task.spawn(function()
-    while true do
-        task.wait()
-        if noatvrestriction and trident.gc.camera then
-            pcall(function()
-                trident.gc.camera.SetMaxRelativeLookExtentsY(99999)
-            end)
-        end
-    end
-end)
-
--- Required Services
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local workspace = game:GetService("Workspace")
-
--- Player & Camera
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
--- Toggles
-local toggles = {
-    longneck = false,
-    fakecrouch = false,
-    freecam = false,
-    carfly = true
-}
-
--- Character Parts
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local middle = character:FindFirstChild("Middle")
-local bottom = character:FindFirstChild("Bottom")
-local top = character:FindFirstChild("Top")
-local originalprismcframe = top and top:FindFirstChild("Prism1") and top.Prism1.CFrame
-local pos = middle and middle.CFrame or CFrame.new()
-
--- Input Handling
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.L and top and top:FindFirstChild("Prism1") then
-        toggles.longneck = not toggles.longneck
-        top.Prism1.CFrame = toggles.longneck and (originalprismcframe - Vector3.yAxis * 15) or originalprismcframe
-    elseif input.KeyCode == Enum.KeyCode.C then
-        toggles.fakecrouch = not toggles.fakecrouch
-    elseif input.KeyCode == Enum.KeyCode.F then
-        toggles.freecam = not toggles.freecam
-        middle.CanCollide = not toggles.freecam
-        bottom.CanCollide = not toggles.freecam
-        top.CanCollide = not toggles.freecam
-    elseif input.KeyCode == Enum.KeyCode.X then
-        toggles.carfly = not toggles.carfly
-    end
-end)
-
--- Freecam & Fake Crouch
-local speed = 55
-local freecamoffset = Vector3.zero
-local fakecrouch_timer = tick()
-
-RunService.Heartbeat:Connect(function(delta)
-    if toggles.fakecrouch and tick() - fakecrouch_timer >= 0.15 then
-        fakecrouch_timer = tick()
-    end
-
-    if toggles.freecam and middle then
-        middle.CFrame = pos
-        RunService.RenderStepped:Wait()
-        local cameralook = Camera.CFrame.LookVector
-        local direction = Vector3.zero
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += cameralook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction -= cameralook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += Vector3.new(-cameralook.Z, 0, cameralook.X) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction += Vector3.new(cameralook.Z, 0, -cameralook.X) end
-
-        if direction ~= Vector3.zero then direction = direction.Unit end
-        freecamoffset = freecamoffset + (direction * delta * speed)
-        middle.CFrame = pos + freecamoffset
-        middle.AssemblyLinearVelocity = Vector3.zero
+-- Long Neck Functionality
+local function toggleLongNeck()
+    longNeckEnabled = not longNeckEnabled
+    if longNeckEnabled then
+        workspace.Const.Ignore.LocalCharacter.Top.Prism1.CFrame = originalPrismCFrame - Vector3.yAxis * 15
     else
-        freecamoffset = Vector3.zero
-        pos = middle and middle.CFrame or CFrame.new()
+        workspace.Const.Ignore.LocalCharacter.Top.Prism1.CFrame = originalPrismCFrame
     end
-end)
+end
 
--- ATV Fly
-local car, dist = nil, 50
-
-local function findcar()
-    car, dist = nil, 50
+-- ATV Fly Functionality
+local function findATV()
+    atvCar, atvDist = nil, 50
     for _, v in pairs(workspace:GetChildren()) do
         if v:FindFirstChild("Seat") and v:FindFirstChild("Frame") then
-            local carDist = (v.Frame.Position - character.PrimaryPart.Position).Magnitude
-            if carDist < dist then
-                car = v
-                dist = carDist
+            local distance = (v.Frame.Position - workspace.Const.Ignore.LocalCharacter.Middle.Position).Magnitude
+            if distance < atvDist then
+                atvCar = v
+                atvDist = distance
             end
         end
     end
 end
-findcar()
 
-local buildup = 0
-local speed, accel, upspeed = 55, 100, 15
-
-RunService.RenderStepped:Connect(function(delta)
-    if toggles.carfly and car and car:FindFirstChild("Frame") and (car.Frame.Position - Camera.CFrame.Position).Magnitude <= 50 then
-        local cameralook = Camera.CFrame.LookVector
-        cameralook = Vector3.new(cameralook.X, 0, cameralook.Z)
+local function updateATVFly(delta)
+    if atvFlyEnabled and atvCar and atvCar:FindFirstChild("Frame") and (atvCar.Frame.CFrame.Position - workspace.CurrentCamera.CFrame.Position).Magnitude <= 50 then
+        local cameraLook = workspace.CurrentCamera.CFrame.LookVector
+        cameraLook = Vector3.new(cameraLook.X, 0, cameraLook.Z)
         local direction = Vector3.zero
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += cameralook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction -= cameralook end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += Vector3.new(-cameralook.Z, 0, cameralook.X) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction += Vector3.new(cameralook.Z, 0, -cameralook.X) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.V) then direction += Vector3.yAxis end
-        if UserInputService:IsKeyDown(Enum.KeyCode.B) then direction -= Vector3.yAxis end
-
-        if direction ~= Vector3.zero then direction = direction.Unit end
-        buildup = math.clamp(buildup + delta * accel, 0, speed)
-
-        for _, v in pairs(car:GetChildren()) do
-            v.AssemblyLinearVelocity = Vector3.new(direction.X * buildup, direction.Y * upspeed, direction.Z * buildup)
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.W) and direction + cameraLook or direction
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.S) and direction - cameraLook or direction
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.D) and direction + Vector3.new(-cameraLook.Z, 0, cameraLook.X) or direction
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.A) and direction + Vector3.new(cameraLook.Z, 0, -cameraLook.X) or direction
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.V) and direction + Vector3.yAxis or direction
+        direction = UserInputService:IsKeyDown(Enum.KeyCode.B) and direction - Vector3.yAxis or direction
+        if direction ~= Vector3.zero then
+            direction = direction.Unit
+            if direction ~= Vector3.yAxis and -direction ~= Vector3.yAxis then
+                atvBuildup = math.clamp(atvBuildup + delta * atvAccel, 0, atvSpeed)
+                atvLastDir = direction
+            end
+        else
+            direction = atvLastDir
+            atvBuildup = math.clamp(atvBuildup - delta * 150, 0, atvSpeed)
         end
+        for _, v in pairs(atvCar:GetChildren()) do
+            v.AssemblyLinearVelocity = Vector3.new(direction.X * atvBuildup, direction.Y * atvUpSpeed, direction.Z * atvBuildup)
+        end
+    elseif not atvCar or (atvCar and atvCar:FindFirstChild("Frame") and (atvCar.Frame.CFrame.Position - workspace.CurrentCamera.CFrame.Position).Magnitude > 50) then
+        findATV()
+        atvBuildup = 0
     else
-        findcar()
-        buildup = 0
+        atvBuildup = 0
+    end
+end
+
+-- Key Bind for Long Neck
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.L then
+        toggleLongNeck()
+    end
+end)
+
+-- ATV Fly Toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.F then
+        atvFlyEnabled = not atvFlyEnabled
+        findATV()
+    end
+end)
+
+-- ATV Fly Update Loop
+RunService.RenderStepped:Connect(function(delta)
+    if atvFlyEnabled then
+        updateATVFly(delta)
     end
 end)
